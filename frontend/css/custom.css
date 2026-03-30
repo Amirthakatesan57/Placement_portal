@@ -1,0 +1,200 @@
+
+body {
+    background: linear-gradient(135deg, #eef3ff, #dbe7ff);
+    min-height: 100vh;
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: #2c2c2c;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main.container {
+    flex: 1;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+.navbar {
+    background: linear-gradient(90deg, #0d3b8e, #2563eb);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+}
+
+.navbar-brand {
+    color: white !important;
+    font-weight: 600;
+}
+
+.navbar-nav .nav-link {
+    color: white !important;
+    font-weight: 500;
+}
+
+.navbar-nav .nav-link:hover {
+    opacity: 0.8;
+}
+
+.card {
+    border-radius: 10px;
+    border: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    transition: 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+}
+
+.card-header {
+    background: linear-gradient(90deg, #1e3a8a, #1d4ed8);
+    color: white;
+    font-weight: 600;
+    border-bottom: 1px solid #1e3a8a;
+}
+
+.card-title {
+    font-weight: 600;
+}
+
+.stat-card {
+    border-radius: 10px;
+    padding: 20px;
+    color: white;
+    font-weight: 600;
+}
+
+.stat-blue {
+    background: linear-gradient(135deg, #0d3b8e, #2563eb);
+}
+
+.stat-light {
+    background: linear-gradient(135deg, #2563eb, #60a5fa);
+}
+
+.stat-green {
+    background: linear-gradient(135deg, #198754, #5dd39e);
+}
+
+.stat-red {
+    background: linear-gradient(135deg, #dc3545, #ff6b6b);
+}
+
+.table {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table thead {
+    background: linear-gradient(90deg, #0d3b8e, #2563eb);
+    color: white;
+}
+
+.table thead th {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+.table tbody tr:hover {
+    background: #eef3ff;
+}
+
+.btn {
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background: linear-gradient(90deg, #0d3b8e, #2563eb);
+    border: none;
+}
+
+.btn-success {
+    background: linear-gradient(90deg, #198754, #5dd39e);
+    border: none;
+}
+
+.btn-danger {
+    background: linear-gradient(90deg, #dc3545, #ff6b6b);
+    border: none;
+}
+
+.btn-info {
+    background: linear-gradient(90deg, #2563eb, #60a5fa);
+    border: none;
+}
+
+.btn-warning {
+    background: linear-gradient(90deg, #ffc107, #ffe082);
+    border: none;
+}
+
+.btn:hover {
+    opacity: 0.9;
+}
+
+.form-control {
+    border-radius: 6px;
+    border: 1px solid #9bb6ff;
+}
+
+.form-control:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 4px rgba(37,99,235,0.4);
+}
+
+.badge {
+    padding: 5px 8px;
+    font-weight: 500;
+}
+
+.hover-card {
+    transition: 0.3s;
+    cursor: pointer;
+}
+
+.hover-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+.spinner-border {
+    width: 2rem;
+    height: 2rem;
+}
+
+footer {
+    margin-top: auto;
+    background: linear-gradient(90deg, #0d3b8e, #2563eb);
+    color: white;
+    padding: 10px;
+    text-align: center;
+}
+
+#app main {
+    flex: 1 0 auto;
+}
+
+#app footer {
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+
+    .display-4 {
+        font-size: 2rem;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    .navbar-brand {
+        font-size: 16px;
+    }
+
+}

@@ -1,0 +1,28 @@
+# Flask & Extensions
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-Login==0.6.3
+Flask-CORS==4.0.0
+Flask-Mail==0.9.1
+
+# Celery & Redis - Milestone 7
+redis==5.0.1
+celery==5.3.4
+flower==2.0.1
+
+# Email & Notifications
+python-dotenv==1.0.0
+requests==2.31.0
+
+# Date utilities
+python-dateutil==2.8.2
+
+# PDF Generation (Optional)
+pdfkit==1.0.0
+wkhtmltopdf==0.2
+
+# CSV & Excel
+openpyxl==3.1.2
+
+# Utilities
+Werkzeug==3.0.1

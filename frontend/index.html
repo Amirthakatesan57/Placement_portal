@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Placement Portal Application V2 - Company Dashboard">
+    <title>Placement Portal V2 - Milestone 4</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Vue.js 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Vue Router 4 -->
+    <script src="https://unpkg.com/vue-router@4/dist/vue-router.global.js"></script>
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/frontend/css/custom.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Navigation Bar -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
+            <div class="container">
+                <a class="navbar-brand fw-bold" href="#/">
+                    <i class="bi bi-mortarboard-fill"></i> Placement Portal V2
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <template v-if="isLoggedIn">
+                            <li class="nav-item">
+                                <span class="nav-link text-light">
+                                    <i class="bi bi-person-circle"></i> {{ currentUser.username }} 
+                                    <span class="badge bg-light text-dark ms-1">{{ currentUser.role }}</span>
+                                </span>
+                            </li>
+                            <li class="nav-item" v-if="currentUser.role === 'admin'">
+                                <router-link to="/admin/dashboard" class="nav-link">
+                                    <i class="bi bi-speedometer2"></i> Dashboard
+                                </router-link>
+                            </li>
+                            <li class="nav-item" v-if="currentUser.role === 'company'">
+                                <router-link to="/company/dashboard" class="nav-link">
+                                    <i class="bi bi-briefcase"></i> Dashboard
+                                </router-link>
+                            </li>
+                            <li class="nav-item" v-if="currentUser.role === 'student'">
+                                <router-link to="/student/dashboard" class="nav-link">
+                                    <i class="bi bi-mortarboard"></i> Dashboard
+                                </router-link>
+                            </li>
+                            <li class="nav-item">
+                                <button @click="logout" class="btn btn-outline-light btn-sm ms-2">
+                                    <i class="bi bi-box-arrow-right"></i> Logout
+                                </button>
+                            </li>
+                        </template>
+                        <template v-else>
+                            <li class="nav-item">
+                                <router-link to="/login" class="nav-link">Login</router-link>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Main Content -->
+        <main class="container">
+            <router-view></router-view>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="mt-5 py-4 bg-light border-top">
+            <div class="container text-center">
+                <p class="text-muted mb-0">
+                    Placement Portal Application V2 &copy; 2024 | Milestone 4 Complete
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Load scripts in correct order -->
+    <script src="/frontend/js/api.js"></script>
+    <script src="/frontend/js/auth.js"></script>
+    <script src="/frontend/js/router.js"></script>
+    <script src="/frontend/js/app.js"></script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

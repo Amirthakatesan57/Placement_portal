@@ -1,0 +1,1883 @@
+openapi: 3.0.3
+info:
+  title: Placement Portal Application V2 - API Documentation
+  description: |
+    ## Placement Portal Application V2
+    
+    A comprehensive campus recruitment management system built with Flask (Backend API) and Vue.js (Frontend UI).
+    
+    ### Features
+    - **Admin Dashboard**: Manage companies, students, and placement drives
+    - **Company Portal**: Create drives, review applications, schedule interviews
+    - **Student Portal**: Browse jobs, apply, track application status
+    - **Automated Jobs**: Interview reminders, monthly reports, CSV exports
+    - **Performance**: Redis caching for API optimization
+    
+    ### Authentication
+    All endpoints except login/register require authentication via session cookies.
+    
+    ### Roles
+    - `admin` - Institute placement cell (highest access)
+    - `company` - Registered organizations (requires admin approval)
+    - `student` - Registered students (self-registration)
+    
+    ### Milestones
+    - Milestone 0: GitHub Repository Setup
+    - Milestone 1: Database Models and Schema Setup
+    - Milestone 2: Authentication and Role-Based Access
+    - Milestone 3: Admin Dashboard and Management
+    - Milestone 4: Company Dashboard and Job/Application Management
+    - Milestone 5: Student Dashboard and Job Application System
+    - Milestone 6: Job Application History and Status Tracking
+    - Milestone 7: Backend Jobs (Celery + Redis)
+    - Milestone 8: API Performance Optimization and Caching
+    
+    ### Contact
+    - **Course**: Modern Application Development II
+    - **Institution**: Indian Institute of Technology Madras
+    - **Program**: B.S. in Data Science and Applications
+  
+  version: 2.0.0
+  contact:
+    name: Placement Portal V2 Support
+    email: support@placement.iitm.ac.in
+  license:
+    name: MIT License
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:5000/api
+    description: Development server (local)
+  - url: https://your-production-domain.com/api
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User login, registration, and logout endpoints
+  - name: Admin
+    description: Admin dashboard and management endpoints
+  - name: Company
+    description: Company profile, drives, and application management
+  - name: Student
+    description: Student profile, job applications, and placement tracking
+  - name: Reports
+    description: Monthly reports and analytics
+  - name: Cache
+    description: Cache statistics and management (Milestone 8)
+  - name: Exports
+    description: CSV export endpoints (Milestone 7)
+
+paths:
+  # ============================================================================
+  # AUTHENTICATION ENDPOINTS
+  # ============================================================================
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User Login
+      description: Authenticate user and create session
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: User Registration
+      description: Register new student or company account
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          description: Invalid request or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Username or email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: User Logout
+      description: End user session
+      operationId: logout
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get Current User
+      description: Get authenticated user profile
+      operationId: getCurrentUser
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ============================================================================
+  # ADMIN ENDPOINTS
+  # ============================================================================
+  /admin/dashboard/stats:
+    get:
+      tags:
+        - Admin
+      summary: Admin Dashboard Statistics
+      description: Get complete dashboard statistics
+      operationId: getAdminDashboardStats
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminDashboardStats'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (not admin)
+  
+  /admin/companies:
+    get:
+      tags:
+        - Admin
+      summary: List All Companies
+      description: Get all registered companies with search and pagination
+      operationId: getAdminCompanies
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: search
+          in: query
+          description: Search by company name or industry
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of companies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /admin/companies/{id}/approve:
+    post:
+      tags:
+        - Admin
+      summary: Approve Company
+      description: Approve company registration
+      operationId: approveCompany
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Company ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Company approved
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Company not found
+  
+  /admin/companies/{id}/blacklist:
+    post:
+      tags:
+        - Admin
+      summary: Blacklist Company
+      description: Blacklist/deactivate company
+      operationId: blacklistCompany
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Company blacklisted
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Company not found
+  
+  /admin/students:
+    get:
+      tags:
+        - Admin
+      summary: List All Students
+      description: Get all registered students with search
+      operationId: getAdminStudents
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: search
+          in: query
+          description: Search by name, roll number, or branch
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of students
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /admin/students/{id}/blacklist:
+    post:
+      tags:
+        - Admin
+      summary: Blacklist Student
+      description: Blacklist/deactivate student
+      operationId: blacklistStudent
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Student blacklisted
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Student not found
+  
+  /admin/drives:
+    get:
+      tags:
+        - Admin
+      summary: List All Drives
+      description: Get all placement drives
+      operationId: getAdminDrives
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: status
+          in: query
+          description: Filter by status
+          schema:
+            type: string
+            enum: [pending, approved, active, closed, rejected]
+      responses:
+        '200':
+          description: List of drives
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriveList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /admin/drives/{id}/approve:
+    post:
+      tags:
+        - Admin
+      summary: Approve Drive
+      description: Approve placement drive
+      operationId: approveDrive
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Drive approved
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Drive not found
+  
+  /admin/applications:
+    get:
+      tags:
+        - Admin
+      summary: List All Applications
+      description: Get all applications across all drives
+      operationId: getAdminApplications
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: status
+          in: query
+          description: Filter by application status
+          schema:
+            type: string
+            enum: [applied, shortlisted, interview, selected, rejected]
+      responses:
+        '200':
+          description: List of applications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  # ============================================================================
+  # COMPANY ENDPOINTS
+  # ============================================================================
+  /company/dashboard/stats:
+    get:
+      tags:
+        - Company
+      summary: Company Dashboard Statistics
+      description: Get company dashboard statistics
+      operationId: getCompanyDashboardStats
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyDashboardStats'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (not company)
+  
+  /company/profile:
+    get:
+      tags:
+        - Company
+      summary: Get Company Profile
+      description: Get company profile details
+      operationId: getCompanyProfile
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Company profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyProfile'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+    
+    put:
+      tags:
+        - Company
+      summary: Update Company Profile
+      description: Update company profile details
+      operationId: updateCompanyProfile
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyProfileUpdate'
+      responses:
+        '200':
+          description: Profile updated
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /company/drives:
+    get:
+      tags:
+        - Company
+      summary: List Company Drives
+      description: Get all drives created by this company
+      operationId: getCompanyDrives
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: status
+          in: query
+          description: Filter by status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of drives
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriveList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+    
+    post:
+      tags:
+        - Company
+      summary: Create Drive
+      description: Create new placement drive
+      operationId: createDrive
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DriveCreate'
+      responses:
+        '201':
+          description: Drive created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Drive'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (not approved)
+  
+  /company/drives/{id}:
+    get:
+      tags:
+        - Company
+      summary: Get Drive Details
+      description: Get drive details
+      operationId: getCompanyDriveDetails
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Drive details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Drive'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Drive not found
+  
+  /company/drives/{id}/status:
+    put:
+      tags:
+        - Company
+      summary: Update Drive Status
+      description: Update drive status (active/closed)
+      operationId: updateDriveStatus
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [active, closed]
+      responses:
+        '200':
+          description: Status updated
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Drive not found
+  
+  /company/applications:
+    get:
+      tags:
+        - Company
+      summary: List Applications
+      description: Get all applications for company drives
+      operationId: getCompanyApplications
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: status
+          in: query
+          description: Filter by status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of applications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /company/applications/{id}/status:
+    put:
+      tags:
+        - Company
+      summary: Update Application Status
+      description: Update application status
+      operationId: updateApplicationStatus
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [applied, shortlisted, interview, selected, rejected]
+                feedback:
+                  type: string
+      responses:
+        '200':
+          description: Status updated
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Application not found
+  
+  /company/applications/{id}/interview:
+    post:
+      tags:
+        - Company
+      summary: Schedule Interview
+      description: Schedule interview for applicant
+      operationId: scheduleInterview
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InterviewSchedule'
+      responses:
+        '200':
+          description: Interview scheduled
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Application not found
+  
+  /company/placements:
+    get:
+      tags:
+        - Company
+      summary: List Placements
+      description: Get all placements for this company
+      operationId: getCompanyPlacements
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: List of placements
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlacementList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /company/export/applications:
+    post:
+      tags:
+        - Exports
+      summary: Export Applications CSV
+      description: Export application history to CSV (async job)
+      operationId: exportCompanyApplications
+      security:
+        - sessionAuth: []
+      responses:
+        '202':
+          description: Export started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /company/export/placements:
+    post:
+      tags:
+        - Exports
+      summary: Export Placements CSV
+      description: Export placement history to CSV (async job)
+      operationId: exportCompanyPlacements
+      security:
+        - sessionAuth: []
+      responses:
+        '202':
+          description: Export started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  # ============================================================================
+  # STUDENT ENDPOINTS
+  # ============================================================================
+  /student/dashboard/stats:
+    get:
+      tags:
+        - Student
+      summary: Student Dashboard Statistics
+      description: Get student dashboard statistics
+      operationId: getStudentDashboardStats
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentDashboardStats'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden (not student)
+  
+  /student/profile:
+    get:
+      tags:
+        - Student
+      summary: Get Student Profile
+      description: Get student profile details
+      operationId: getStudentProfile
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Student profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentProfile'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+    
+    put:
+      tags:
+        - Student
+      summary: Update Student Profile
+      description: Update student profile details
+      operationId: updateStudentProfile
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentProfileUpdate'
+      responses:
+        '200':
+          description: Profile updated
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /student/profile/resume:
+    post:
+      tags:
+        - Student
+      summary: Upload Resume
+      description: Upload student resume (PDF/DOC)
+      operationId: uploadResume
+      security:
+        - sessionAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                resume:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Resume uploaded
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+    
+    get:
+      tags:
+        - Student
+      summary: Download Resume
+      description: Download student resume
+      operationId: downloadResume
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Resume file
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Resume not found
+  
+  /student/drives:
+    get:
+      tags:
+        - Student
+      summary: Browse Job Drives
+      description: Get all approved placement drives
+      operationId: getStudentDrives
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: search
+          in: query
+          description: Search by job title or company
+          schema:
+            type: string
+        - name: skills
+          in: query
+          description: Filter by required skills
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of drives
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DriveList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /student/drives/{id}/apply:
+    post:
+      tags:
+        - Student
+      summary: Apply to Drive
+      description: Apply for placement drive
+      operationId: applyToDrive
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Application submitted
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Drive not found
+        '409':
+          description: Already applied
+  
+  /student/applications:
+    get:
+      tags:
+        - Student
+      summary: My Applications
+      description: Get all applications by this student
+      operationId: getStudentApplications
+      security:
+        - sessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: status
+          in: query
+          description: Filter by status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of applications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApplicationList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /student/interviews:
+    get:
+      tags:
+        - Student
+      summary: My Interviews
+      description: Get scheduled interviews
+      operationId: getStudentInterviews
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: List of interviews
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  interviews:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Interview'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /student/placements:
+    get:
+      tags:
+        - Student
+      summary: My Placements
+      description: Get placement records
+      operationId: getStudentPlacements
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: List of placements
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlacementList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /student/history:
+    get:
+      tags:
+        - Student
+      summary: Complete History
+      description: Get complete application and placement history
+      operationId: getStudentHistory
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Complete history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentHistory'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /student/export/applications:
+    post:
+      tags:
+        - Exports
+      summary: Export Applications CSV
+      description: Export application history to CSV (async job)
+      operationId: exportStudentApplications
+      security:
+        - sessionAuth: []
+      responses:
+        '202':
+          description: Export started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /student/export/placements:
+    post:
+      tags:
+        - Exports
+      summary: Export Placements CSV
+      description: Export placement history to CSV (async job)
+      operationId: exportStudentPlacements
+      security:
+        - sessionAuth: []
+      responses:
+        '202':
+          description: Export started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  # ============================================================================
+  # REPORTS ENDPOINTS (MILESTONE 7)
+  # ============================================================================
+  /admin/reports/monthly:
+    get:
+      tags:
+        - Reports
+      summary: Get Monthly Reports
+      description: Get list of generated monthly reports
+      operationId: getMonthlyReports
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: List of reports
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /admin/reports/monthly/generate:
+    post:
+      tags:
+        - Reports
+      summary: Generate Monthly Reports
+      description: Trigger monthly report generation (async job)
+      operationId: generateMonthlyReports
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Reports generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportGenerationResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /admin/reports/monthly/{filename}:
+    get:
+      tags:
+        - Reports
+      summary: Download Monthly Report
+      description: Download monthly report HTML file
+      operationId: downloadMonthlyReport
+      security:
+        - sessionAuth: []
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report file
+          content:
+            text/html:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Report not found
+
+  # ============================================================================
+  # CACHE ENDPOINTS (MILESTONE 8)
+  # ============================================================================
+  /admin/cache/stats:
+    get:
+      tags:
+        - Cache
+      summary: Cache Statistics
+      description: Get Redis cache statistics
+      operationId: getCacheStats
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Cache statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheStats'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  
+  /admin/cache/clear:
+    post:
+      tags:
+        - Cache
+      summary: Clear Cache
+      description: Clear all Redis cache
+      operationId: clearCache
+      security:
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Cache cleared
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CacheClearResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Flask session cookie for authentication
+  
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: Page number
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+    
+    PerPageParam:
+      name: per_page
+      in: query
+      description: Items per page
+      schema:
+        type: integer
+        default: 10
+        minimum: 1
+        maximum: 100
+  
+  schemas:
+    # ============================================================================
+    # AUTHENTICATION SCHEMAS
+    # ============================================================================
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 3
+        password:
+          type: string
+          minLength: 6
+    
+    LoginResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+    
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+        - role
+      properties:
+        username:
+          type: string
+          minLength: 3
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        role:
+          type: string
+          enum: [student, company]
+        student_data:
+          $ref: '#/components/schemas/StudentData'
+        company_data:
+          $ref: '#/components/schemas/CompanyData'
+    
+    StudentData:
+      type: object
+      properties:
+        full_name:
+          type: string
+        roll_number:
+          type: string
+        branch:
+          type: string
+        year_of_study:
+          type: integer
+        cgpa:
+          type: number
+          format: float
+        phone:
+          type: string
+        skills:
+          type: string
+    
+    CompanyData:
+      type: object
+      properties:
+        company_name:
+          type: string
+        industry:
+          type: string
+        location:
+          type: string
+        website:
+          type: string
+        hr_contact_name:
+          type: string
+        hr_contact_email:
+          type: string
+        hr_contact_phone:
+          type: string
+        company_description:
+          type: string
+    
+    RegisterResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+        redirect_url:
+          type: string
+    
+    LogoutResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [admin, company, student]
+    
+    UserProfile:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+    
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+
+    # ============================================================================
+    # ADMIN SCHEMAS
+    # ============================================================================
+    AdminDashboardStats:
+      type: object
+      properties:
+        total_students:
+          type: integer
+        total_companies:
+          type: integer
+        total_drives:
+          type: integer
+        total_applications:
+          type: integer
+        total_placements:
+          type: integer
+        pending_companies:
+          type: integer
+        pending_drives:
+          type: integer
+        active_drives:
+          type: integer
+        blacklisted_users:
+          type: integer
+    
+    CompanyList:
+      type: object
+      properties:
+        companies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Company'
+        total:
+          type: integer
+        pages:
+          type: integer
+        current_page:
+          type: integer
+    
+    Company:
+      type: object
+      properties:
+        id:
+          type: integer
+        company_name:
+          type: string
+        industry:
+          type: string
+        location:
+          type: string
+        email:
+          type: string
+        approval_status:
+          type: string
+          enum: [pending, approved, rejected, blacklisted]
+        created_at:
+          type: string
+          format: date-time
+    
+    StudentList:
+      type: object
+      properties:
+        students:
+          type: array
+          items:
+            $ref: '#/components/schemas/Student'
+        total:
+          type: integer
+        pages:
+          type: integer
+    
+    Student:
+      type: object
+      properties:
+        id:
+          type: integer
+        full_name:
+          type: string
+        roll_number:
+          type: string
+        branch:
+          type: string
+        cgpa:
+          type: number
+        email:
+          type: string
+        is_blacklisted:
+          type: boolean
+    
+    DriveList:
+      type: object
+      properties:
+        drives:
+          type: array
+          items:
+            $ref: '#/components/schemas/Drive'
+        total:
+          type: integer
+        pages:
+          type: integer
+    
+    Drive:
+      type: object
+      properties:
+        id:
+          type: integer
+        company_id:
+          type: integer
+        company_name:
+          type: string
+        job_title:
+          type: string
+        job_description:
+          type: string
+        salary:
+          type: number
+        location:
+          type: string
+        eligibility_criteria:
+          type: string
+        skills_required:
+          type: string
+        application_deadline:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, approved, active, closed, rejected]
+        application_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+    
+    ApplicationList:
+      type: object
+      properties:
+        applications:
+          type: array
+          items:
+            $ref: '#/components/schemas/Application'
+        total:
+          type: integer
+        pages:
+          type: integer
+    
+    Application:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        student_name:
+          type: string
+        drive_id:
+          type: integer
+        drive_title:
+          type: string
+        company_name:
+          type: string
+        status:
+          type: string
+          enum: [applied, shortlisted, interview, selected, rejected]
+        application_date:
+          type: string
+          format: date-time
+        interview_date:
+          type: string
+          format: date-time
+        feedback:
+          type: string
+
+    # ============================================================================
+    # COMPANY SCHEMAS
+    # ============================================================================
+    CompanyDashboardStats:
+      type: object
+      properties:
+        company_name:
+          type: string
+        approval_status:
+          type: string
+        industry:
+          type: string
+        total_drives:
+          type: integer
+        active_drives:
+          type: integer
+        total_applications:
+          type: integer
+        total_placements:
+          type: integer
+    
+    CompanyProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        company_name:
+          type: string
+        industry:
+          type: string
+        location:
+          type: string
+        website:
+          type: string
+        hr_contact_name:
+          type: string
+        hr_contact_email:
+          type: string
+        hr_contact_phone:
+          type: string
+        company_description:
+          type: string
+        approval_status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    
+    CompanyProfileUpdate:
+      type: object
+      properties:
+        company_name:
+          type: string
+        industry:
+          type: string
+        location:
+          type: string
+        website:
+          type: string
+        hr_contact_name:
+          type: string
+        hr_contact_email:
+          type: string
+        hr_contact_phone:
+          type: string
+        company_description:
+          type: string
+    
+    DriveCreate:
+      type: object
+      required:
+        - job_title
+        - job_description
+        - salary
+        - location
+        - eligibility_criteria
+        - application_deadline
+      properties:
+        job_title:
+          type: string
+        job_description:
+          type: string
+        salary:
+          type: number
+        location:
+          type: string
+        eligibility_criteria:
+          type: string
+        skills_required:
+          type: string
+        application_deadline:
+          type: string
+          format: date-time
+    
+    InterviewSchedule:
+      type: object
+      required:
+        - interview_date
+      properties:
+        interview_date:
+          type: string
+          format: date-time
+        interview_type:
+          type: string
+          enum: [In-Person, Video Call, Phone, Online Test]
+        interview_location:
+          type: string
+
+    # ============================================================================
+    # STUDENT SCHEMAS
+    # ============================================================================
+    StudentDashboardStats:
+      type: object
+      properties:
+        student_name:
+          type: string
+        branch:
+          type: string
+        roll_number:
+          type: string
+        is_eligible:
+          type: boolean
+        has_placement:
+          type: boolean
+        total_applications:
+          type: integer
+        shortlisted:
+          type: integer
+        interview_scheduled:
+          type: integer
+        placed:
+          type: integer
+    
+    StudentProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        full_name:
+          type: string
+        roll_number:
+          type: string
+        branch:
+          type: string
+        year_of_study:
+          type: integer
+        cgpa:
+          type: number
+        phone:
+          type: string
+        email:
+          type: string
+        skills:
+          type: string
+        education_details:
+          type: string
+        experience_details:
+          type: string
+        resume_path:
+          type: string
+        is_eligible:
+          type: boolean
+    
+    StudentProfileUpdate:
+      type: object
+      properties:
+        phone:
+          type: string
+        skills:
+          type: string
+        education_details:
+          type: string
+        experience_details:
+          type: string
+    
+    PlacementList:
+      type: object
+      properties:
+        placements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Placement'
+        total:
+          type: integer
+    
+    Placement:
+      type: object
+      properties:
+        id:
+          type: integer
+        student_id:
+          type: integer
+        company_id:
+          type: integer
+        company_name:
+          type: string
+        position:
+          type: string
+        salary:
+          type: number
+        joining_date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [offered, joined, declined]
+        placement_date:
+          type: string
+          format: date-time
+    
+    StudentHistory:
+      type: object
+      properties:
+        history:
+          type: object
+          properties:
+            applications:
+              type: array
+              items:
+                $ref: '#/components/schemas/Application'
+            placements:
+              type: array
+              items:
+                $ref: '#/components/schemas/Placement'
+        total_applications:
+          type: integer
+        total_placements:
+          type: integer
+    
+    Interview:
+      type: object
+      properties:
+        application_id:
+          type: integer
+        job_title:
+          type: string
+        company_name:
+          type: string
+        interview_date:
+          type: string
+          format: date-time
+        interview_type:
+          type: string
+        interview_location:
+          type: string
+        status:
+          type: string
+        feedback:
+          type: string
+
+    # ============================================================================
+    # REPORTS & EXPORTS SCHEMAS (MILESTONE 7)
+    # ============================================================================
+    ReportList:
+      type: object
+      properties:
+        reports:
+          type: array
+          items:
+            $ref: '#/components/schemas/Report'
+        total:
+          type: integer
+    
+    Report:
+      type: object
+      properties:
+        filename:
+          type: string
+        company_name:
+          type: string
+        period:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        file_size:
+          type: integer
+        download_url:
+          type: string
+    
+    ReportGenerationResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        reports_generated:
+          type: integer
+        reports_failed:
+          type: integer
+        report_period:
+          type: string
+    
+    ExportResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        filename:
+          type: string
+        download_url:
+          type: string
+        email_sent:
+          type: boolean
+
+    # ============================================================================
+    # CACHE SCHEMAS (MILESTONE 8)
+    # ============================================================================
+    CacheStats:
+      type: object
+      properties:
+        cache_stats:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+            keys_count:
+              type: integer
+            hits:
+              type: integer
+            misses:
+              type: integer
+            hit_rate:
+              type: number
+              format: float
+            memory_used:
+              type: number
+              format: float
+            connected_clients:
+              type: integer
+        cache_expiry_config:
+          type: object
+          additionalProperties:
+            type: integer
+    
+    CacheClearResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        keys_deleted:
+          type: integer

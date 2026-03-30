@@ -1,0 +1,53 @@
+<!-- Optional: If you want a dedicated cache stats page -->
+{% extends "admin/base.html" %}
+
+{% block title %}Cache Statistics{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1><i class="bi bi-speedometer2"></i> Cache Statistics</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h3>Cache Status</h3>
+                    <h1>{{ 'Enabled' if cache_enabled else 'Disabled' }}</h1>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <h3>Cached Keys</h3>
+                    <h1>{{ keys_count }}</h1>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <h3>Hit Rate</h3>
+                    <h1>{{ hit_rate }}%</h1>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <h3>Memory Used</h3>
+                    <h1>{{ memory_used }} MB</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <form method="POST" action="{{ url_for('admin.clear_cache') }}">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Clear all cache?')">
+                <i class="bi bi-trash"></i> Clear All Cache
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
