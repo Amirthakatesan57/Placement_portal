@@ -53,6 +53,7 @@ def seed_demo_data():
                 role='admin',
                 is_active=True,
                 is_blacklisted=False,
+                created_at=datetime.now(timezone.utc)
             )
             admin_user.set_password('Admin@123')
             db.session.add(admin_user)
@@ -136,6 +137,7 @@ def seed_demo_data():
                     role='company',
                     is_active=True,
                     is_blacklisted=False,
+                    created_at=datetime.now(timezone.utc)
                 )
                 company_user.set_password(comp_data['password'])
                 db.session.add(company_user)
@@ -154,6 +156,7 @@ def seed_demo_data():
                     approval_status=comp_data['approval_status'],
                     approved_at=datetime.now(timezone.utc) if comp_data['approval_status'] == 'approved' else None,
                     approved_by=admin_user.id if comp_data['approval_status'] == 'approved' else None,
+                    created_at=datetime.now(timezone.utc)
                 )
                 db.session.add(company)
                 db.session.commit()
@@ -247,6 +250,7 @@ def seed_demo_data():
                     role='student',
                     is_active=True,
                     is_blacklisted=False,
+                    created_at=datetime.now(timezone.utc)
                 )
                 student_user.set_password(stud_data['password'])
                 db.session.add(student_user)
@@ -262,6 +266,7 @@ def seed_demo_data():
                     phone=stud_data['phone'],
                     skills=stud_data['skills'],
                     is_eligible=stud_data['is_eligible'],
+                    created_at=datetime.now(timezone.utc)
                 )
                 db.session.add(student)
                 db.session.commit()
@@ -359,6 +364,7 @@ def seed_demo_data():
                     status=drive_data['status'],
                     approved_at=datetime.now(timezone.utc) if drive_data['status'] == 'approved' else None,
                     approved_by=admin_user.id if drive_data['status'] == 'approved' else None,
+                    created_at=datetime.now(timezone.utc)
                 )
                 db.session.add(drive)
                 db.session.commit()
