@@ -12,7 +12,12 @@ if not os.path.exists(INSTANCE_DIR):
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-key')
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URI', f'sqlite:///{os.path.join(INSTANCE_DIR, "placement_portal.db")}')
+
+    db_url = os.environ.get('DATABASE_URI', 'sqlite:///instance/placement_portal.db')
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    
+    SQLALCHEMY_DATABASE_URI = db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Redis & Celery
